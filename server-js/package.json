@@ -1,0 +1,16 @@
+{
+  "name": "wetalk-js",
+  "version": "0.0.1",
+  "description": "A nodeJs server for WeTalk webapp ",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Marcin Panasiuk",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.5.4"
+  }
+}

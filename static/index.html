@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>WeTalk</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"
+        integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA=="
+        crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <div id="logo">
+        <a href="/">WeTalk</a>
+    </div>
+    <nav>
+        <a class="active" href="/">Chat</a> | <a href="/settings.html">Settings</a>
+    </nav>
+    <div id="content">
+        <div id="innercontent">
+            <hr id="topbar">
+            <div class="chat" id="chat"></div>
+            <div id="send-message">
+                <input name="message" type="text" id="send-message-input" autofocus>
+            </div>
+
+            <script type="text/javascript" src="main.js"></script>
+        </div>
+    </div>
+</body>
+
+</html>
