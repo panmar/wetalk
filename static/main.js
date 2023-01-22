@@ -44,12 +44,15 @@ function onMessageEvent(message) {
 }
 
 function showMessage(message) {
-    let chatEntryElement = createChatEntryElement(message);
-    let chatElement = document.getElementById("chat");
-    chatElement.appendChild(chatEntryElement);
+    let element = createChatEntryElement(message);
+    document.getElementById("chat").appendChild(element);
+
+    if (window.userId !== message.userId) {
+        updateSentMessageAvatar(element, message.userId);
+    }
 
     // NOTE(panmar): This is probablly not what we want for all messages
-    chatEntryElement.scrollIntoView();
+    element.scrollIntoView();
 }
 
 function createChatEntryElement(message) {
@@ -114,6 +117,24 @@ function buildChatEntryElement(chatEntryClass, chatMessageClasses, messageText, 
     }
 
     return element;
+}
+
+function updateSentMessageAvatar(chatEntryElement, userId) {
+    const id = `last-sent-avatar-${userId}`;
+    let element = document.getElementById(id);
+    if (element) {
+        element.remove();
+    }
+
+    {
+        let avatar = document.createElement("div");
+        avatar.classList.add("avatar");
+        avatar.id = id;
+        const green = userId % 256;
+        const blue = (userId.toString().split("").reverse().join("")) % 256;
+        avatar.style.backgroundColor = `rgb(0, ${green}, ${blue})`;
+        chatEntryElement.getElementsByClassName("chat-sent-avatar-cell")[0].appendChild(avatar);
+    }
 }
 
 function getLastDisplayedMessageUserId() {
