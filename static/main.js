@@ -53,26 +53,67 @@ function showMessage(message) {
 }
 
 function createChatEntryElement(message) {
-    let chatEntryElement = document.createElement("div");
-    chatEntryElement.classList.add("chat-entry");
+    let chatEntryClass = "chat-entry-me";
+    let chatMessageClasses = ["chat-message-me-cell", "chat-message-me"];
+    let messageUserId = undefined;
+
+    if (window.userId !== message.userId) {
+        chatEntryClass = "chat-entry-other";
+        chatMessageClasses = ["chat-message-other-cell", "chat-message-other"];
+    }
 
     if ((message.userId !== window.userId) && (message.userId !== getLastDisplayedMessageUserId())) {
-        let chatUserNameElement = document.createElement("div");
-        chatUserNameElement.classList.add("chat-user-name");
-        chatUserNameElement.append(`User #${message.userId}`);
-        chatEntryElement.appendChild(chatUserNameElement);
+        messageUserId = message.userId;
     }
 
-    let chatCloudElement = document.createElement("div");
-    let className = "chat-entry-me";
-    if (message.userId !== window.userId) {
-        className = "chat-entry-other";
-    }
-    chatCloudElement.classList.add(className);
-    chatCloudElement.append(message.text);
-    chatEntryElement.appendChild(chatCloudElement);
+    let element = buildChatEntryElement(chatEntryClass, chatMessageClasses, message.text, messageUserId);
 
-    return chatEntryElement;
+    return element;
+}
+
+function buildChatEntryElement(chatEntryClass, chatMessageClasses, messageText, userId) {
+    let element = document.createElement("div");
+    element.classList.add("chat-entry", chatEntryClass);
+
+    {
+        let ch = document.createElement("div");
+        ch.classList.add("chat-sent-avatar-cell");
+        element.appendChild(ch);
+    }
+
+    if (!userId) {
+        let ch = document.createElement("div");
+        ch.classList.add(...chatMessageClasses);
+        ch.append(messageText);
+        element.appendChild(ch);
+    } else {
+        let container = document.createElement("div");
+        container.classList.add("chat-message-with-user");
+
+        {
+            let ch = document.createElement("div");
+            ch.classList.add("chat-user-name");
+            ch.append(`User #${userId}`);
+            container.appendChild(ch);
+        }
+
+        {
+            let ch = document.createElement("div");
+            ch.classList.add(...chatMessageClasses);
+            ch.append(messageText);
+            container.appendChild(ch);
+        }
+
+        element.appendChild(container);
+    }
+
+    {
+        let ch = document.createElement("div");
+        ch.classList.add("chat-received-avatar-cell");
+        element.appendChild(ch);
+    }
+
+    return element;
 }
 
 function getLastDisplayedMessageUserId() {
@@ -109,7 +150,6 @@ function hookSendMessageInput(element) {
                 showMessage(message);
                 window.socket.emit("message", message);
             }
-
 
             element.value = "";
 

@@ -173,38 +173,89 @@ pre {
     border-color: rgb(115, 116, 128);
 }
 
-.chat-entry-me {
-    background-color: orange;
-    color: rgb(25, 31, 38);
-    border-radius: 20pt;
-    padding: 10pt;
-    width: max-content;
-    max-width: 80%;
-    align-self: right;
-    margin: 5pt 10pt 5pt auto;
-    word-wrap: break-word;
+.avatar {
+    height: 30pt;
+    width: 30pt;
+    background-color: #bbb;
+    border-radius: 50%;
 }
 
-.chat-entry-other {
-    background-color: gray;
-    color: rgb(25, 31, 38);
-    border-radius: 20pt;
-    padding: 10pt;
-    width: max-content;
-    max-width: 80%;
-    margin: 5pt auto 5pt 5pt;
-    word-wrap: break-word;
-}
-
-.chat-user-name {
-    margin-top: 15pt;
-    margin-left: 15pt;
-    font-size: smaller;
+.avatar-small {
+    height: 15pt;
+    width: 15pt;
+    background-color: #bbb;
+    border-radius: 50%;
 }
 
 .chat {
     overflow-y: scroll;
     height: 80vh;
+    padding-right: 8pt;
+    padding-left: 8pt;
+}
+
+.chat-entry {
+    margin: 2pt;
+    display: flex;
+    flex-direction: row;
+}
+
+.chat-entry-me {
+    justify-content: right;
+}
+
+.chat-entry-other {
+    justify-content: left;
+}
+
+.chat-user-name {
+    margin-top: 15pt;
+    margin-left: 10pt;
+    font-size: smaller;
+}
+
+.chat-sent-avatar-cell {
+    min-width: 35pt;
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+}
+
+.chat-message-me-cell {
+    width: max-content;
+    max-width: 70%;
+}
+
+.chat-message-other-cell {
+    width: max-content;
+    max-width: 70%;
+}
+
+.chat-message-with-user {
+    max-width: 100%;
+}
+
+.chat-received-avatar-cell {
+    min-width: 15pt;
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+}
+
+.chat-message-me {
+    background-color: orange;
+    color: rgb(25, 31, 38);
+    border-radius: 20pt;
+    padding: 10pt;
+    word-wrap: break-word;
+}
+
+.chat-message-other {
+    background-color: gray;
+    color: rgb(25, 31, 38);
+    border-radius: 20pt;
+    padding: 10pt;
+    word-wrap: break-word;
 }
 
 #send-message-input {
