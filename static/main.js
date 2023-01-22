@@ -130,11 +130,17 @@ function updateSentMessageAvatar(chatEntryElement, userId) {
         let avatar = document.createElement("div");
         avatar.classList.add("avatar");
         avatar.id = id;
-        const green = userId % 256;
-        const blue = (userId.toString().split("").reverse().join("")) % 256;
-        avatar.style.backgroundColor = `rgb(0, ${green}, ${blue})`;
+        const [red, green, blue] = computeUserColor(userId);
+        avatar.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
         chatEntryElement.getElementsByClassName("chat-sent-avatar-cell")[0].appendChild(avatar);
     }
+}
+
+function computeUserColor(userId) {
+    const red = 0;
+    const green = userId % 256;
+    const blue = (userId.toString().split("").reverse().join("")) % 256;
+    return [red, green, blue];
 }
 
 function getLastDisplayedMessageUserId() {
