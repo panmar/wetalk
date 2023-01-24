@@ -1,12 +1,15 @@
 class Message {
-    constructor(userId, text) {
+    constructor(userId, text, messageSeqNo, socketId) {
         this.userId = userId;
         this.text = text;
+        this.messageId = `message-id-#${userId}@${messageSeqNo}`;
+        this.socketId = socketId;
     }
 }
 
 function setup() {
     window.userId = Math.floor(Math.random() * 10000);
+    window.lastMessageSeqNo = -1;
 
     if (!window.socket) {
         window.socket = io.connect("", { query: `userId=${window.userId}` });
@@ -16,6 +19,7 @@ function setup() {
     window.socket.on("disconnect", onDisconnectEvent);
     window.socket.on("history", onHistoryEvent);
     window.socket.on("message", onMessageEvent);
+    window.socket.on("message-ack", onMessageAckEvent);
 
     hookSendMessageInput(document.getElementById("send-message-input"));
 }
@@ -41,6 +45,33 @@ function onMessageEvent(message) {
         return;
     }
     showMessage(message);
+
+    window.socket.emit("message-ack", window.userId, message.messageId);
+}
+
+function onMessageAckEvent(x) {
+    console.log(`User: ${x.userId} have seen ${x.messageId}`);
+    updateReceivedMessageAvatar(x.userId, x.messageId);
+}
+
+function updateReceivedMessageAvatar(userId, messageId) {
+    const id = `last-received-avatar-${userId}`;
+
+    const lastAvatar = document.getElementById(id);
+    if (lastAvatar) {
+        lastAvatar.remove();
+    }
+
+    {
+        let messageElement = document.getElementById(messageId);
+        let avatarCellElement = messageElement.getElementsByClassName("chat-received-avatar-cell")[0];
+        const avatarElement = document.createElement("div");
+        const [red, green, blue] = computeUserColor(userId);
+        avatarElement.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
+        avatarElement.classList.add("avatar-small");
+        avatarElement.id = id;
+        avatarCellElement.appendChild(avatarElement);
+    }
 }
 
 function showMessage(message) {
@@ -70,6 +101,8 @@ function createChatEntryElement(message) {
     }
 
     let element = buildChatEntryElement(chatEntryClass, chatMessageClasses, message.text, messageUserId);
+    // TODO(panmar): Put it inside `buildChatEntryElement`
+    element.id = `${message.messageId}`;
 
     return element;
 }
@@ -171,7 +204,7 @@ function hookSendMessageInput(element) {
                 return;
             }
 
-            const message = new Message(window.userId, messageText);
+            const message = new Message(window.userId, messageText, ++window.lastMessageSeqNo, window.socket.id);
 
             {
                 showMessage(message);

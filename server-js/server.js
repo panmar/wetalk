@@ -27,6 +27,15 @@ io.on("connection", (socket) => {
         socket.broadcast.emit("message", message);
     });
 
+    socket.on("message-ack", (userId, messageId) => {
+        console.log(`Message ack: ${userId} ${messageId}`);
+        socket.broadcast.emit("message-ack", {userId, messageId});
+        // let message = messages.find((message) => {
+        //     return message.messageId === messageId;
+        // });
+        // io.to(message.socketId).emit("message-ack", messageId);
+    });
+
     socket.on("disconnect", (reason) => {
         console.log(`Disconnected #${socket.handshake.query.userId}: ${reason}`);
     });
