@@ -64,11 +64,11 @@ function updateReceivedMessageAvatar(userId, messageId) {
 
     {
         let messageElement = document.getElementById(messageId);
-        let avatarCellElement = messageElement.getElementsByClassName("chat-received-avatar-cell")[0];
+        let avatarCellElement = messageElement.getElementsByClassName("message-multiple-receivers-area")[0];
         const avatarElement = document.createElement("div");
         const [red, green, blue] = computeUserColor(userId);
         avatarElement.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
-        avatarElement.classList.add("avatar-small");
+        avatarElement.classList.add("receiver-avatar");
         avatarElement.id = id;
         avatarCellElement.appendChild(avatarElement);
     }
@@ -86,70 +86,70 @@ function showMessage(message) {
     element.scrollIntoView();
 }
 
+
 function createChatEntryElement(message) {
-    let chatEntryClass = "chat-entry-me";
-    let chatMessageClasses = ["chat-message-me-cell", "chat-message-me"];
-    let messageUserId = undefined;
-
-    if (window.userId !== message.userId) {
-        chatEntryClass = "chat-entry-other";
-        chatMessageClasses = ["chat-message-other-cell", "chat-message-other"];
+    let html = "";
+    if (window.userId === message.userId) {
+        html = createChatEntryFromMeHtml(message);
+    } else {
+        html = createChatEntryFromOtherHtml(message);
     }
 
-    if ((message.userId !== window.userId) && (message.userId !== getLastDisplayedMessageUserId())) {
-        messageUserId = message.userId;
-    }
-
-    let element = buildChatEntryElement(chatEntryClass, chatMessageClasses, message.text, messageUserId);
-    // TODO(panmar): Put it inside `buildChatEntryElement`
-    element.id = `${message.messageId}`;
-
+    let element = document.createElement("div");
+    element.classList.add("chat-entry")
+    element.innerHTML = html;
+    element.id = message.messageId;
     return element;
 }
 
-function buildChatEntryElement(chatEntryClass, chatMessageClasses, messageText, userId) {
-    let element = document.createElement("div");
-    element.classList.add("chat-entry", chatEntryClass);
+function createChatEntryFromMeHtml(message) {
+    const html = `
+        <div class="message-from-me">
+            <div class="sender-avatar-area"></div>
+            <div class="message-main-area">
+                <div class="message-text-area right">
+                    <div class="message-buttons hide">
+                        <div class="message-button"></div>
+                        <div class="message-button"></div>
+                        <div class="message-button"></div>
+                    </div>
+                    <div class="message-text message-text-me">${message.text}</div>
+                </div>
+            </div>
+            <div class="message-single-receiver-area"></div>
+        </div>
+        <div class="message-multiple-receivers-area"></div>`;
 
-    {
-        let ch = document.createElement("div");
-        ch.classList.add("chat-sent-avatar-cell");
-        element.appendChild(ch);
+    return html;
+}
+
+function createChatEntryFromOtherHtml(message) {
+    let userNameHtml = "";
+
+    if (message.userId !== getLastDisplayedMessageUserId()) {
+        console.log(`${message.userId} !== ${getLastDisplayedMessageUserId()}`);
+        userNameHtml = `<div class="sender-name">User #${message.userId}</div>`;
     }
 
-    if (!userId) {
-        let ch = document.createElement("div");
-        ch.classList.add(...chatMessageClasses);
-        ch.append(messageText);
-        element.appendChild(ch);
-    } else {
-        let container = document.createElement("div");
-        container.classList.add("chat-message-with-user");
+    const html = `
+        <div class="message-from-other">
+            <div class="sender-avatar-area"></div>
+            <div class="message-main-area">
+                ${userNameHtml}
+                <div class="message-text-area">
+                    <div class="message-text message-text-other">${message.text}</div>
+                    <div class="message-buttons hide">
+                        <div class="message-button"></div>
+                        <div class="message-button"></div>
+                        <div class="message-button"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="message-single-receiver-area"></div>
+        </div>
+        <div class="message-multiple-receivers-area"></div>`;
 
-        {
-            let ch = document.createElement("div");
-            ch.classList.add("chat-user-name");
-            ch.append(`User #${userId}`);
-            container.appendChild(ch);
-        }
-
-        {
-            let ch = document.createElement("div");
-            ch.classList.add(...chatMessageClasses);
-            ch.append(messageText);
-            container.appendChild(ch);
-        }
-
-        element.appendChild(container);
-    }
-
-    {
-        let ch = document.createElement("div");
-        ch.classList.add("chat-received-avatar-cell");
-        element.appendChild(ch);
-    }
-
-    return element;
+    return html;
 }
 
 function updateSentMessageAvatar(chatEntryElement, userId) {
@@ -160,12 +160,13 @@ function updateSentMessageAvatar(chatEntryElement, userId) {
     }
 
     {
-        let avatar = document.createElement("div");
-        avatar.classList.add("avatar");
-        avatar.id = id;
         const [red, green, blue] = computeUserColor(userId);
-        avatar.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
-        chatEntryElement.getElementsByClassName("chat-sent-avatar-cell")[0].appendChild(avatar);
+        const color = `rgb(${red}, ${green}, ${blue})`;
+        let avatar = document.createElement("div");
+        avatar.classList.add("sender-avatar");
+        avatar.style.backgroundColor = color;
+        avatar.id = id;
+        chatEntryElement.getElementsByClassName("sender-avatar-area")[0].appendChild(avatar);
     }
 }
 
@@ -177,7 +178,7 @@ function computeUserColor(userId) {
 }
 
 function getLastDisplayedMessageUserId() {
-    let chatUserNameElements = document.getElementById("chat").getElementsByClassName("chat-user-name");
+    let chatUserNameElements = document.getElementById("chat").getElementsByClassName("sender-name");
     if (chatUserNameElements.length === 0) {
         return -1;
     }
