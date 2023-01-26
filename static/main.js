@@ -2,7 +2,7 @@ class Message {
     constructor(userId, text, messageSeqNo, socketId) {
         this.userId = userId;
         this.text = text;
-        this.messageId = `message-id-#${userId}@${messageSeqNo}`;
+        this.messageId = `message-id-${userId}-${messageSeqNo}`;
         this.socketId = socketId;
     }
 }
@@ -10,11 +10,13 @@ class Message {
 function setup() {
     window.userId = Math.floor(Math.random() * 10000);
     window.lastMessageSeqNo = -1;
+    window.messagesToAck = [];
 
     if (!window.socket) {
         window.socket = io.connect("", { query: `userId=${window.userId}` });
     }
 
+    document.addEventListener("visibilitychange", onVisibilityChange);
     window.socket.on("connect", onConnectEvent);
     window.socket.on("disconnect", onDisconnectEvent);
     window.socket.on("history", onHistoryEvent);
@@ -22,6 +24,18 @@ function setup() {
     window.socket.on("message-ack", onMessageAckEvent);
 
     hookSendMessageInput(document.getElementById("send-message-input"));
+}
+
+function onVisibilityChange() {
+    if (document.hidden) {
+        return;
+    }
+
+    for (const message of window.messagesToAck) {
+        window.socket.emit("message-ack", window.userId, message.messageId);
+    }
+
+    window.messagesToAck = [];
 }
 
 function onConnectEvent() {
@@ -46,7 +60,11 @@ function onMessageEvent(message) {
     }
     showMessage(message);
 
-    window.socket.emit("message-ack", window.userId, message.messageId);
+    if (document.hidden) {
+        window.messagesToAck.push(message);
+    } else {
+        window.socket.emit("message-ack", window.userId, message.messageId);
+    }
 }
 
 function onMessageAckEvent(x) {
@@ -56,6 +74,18 @@ function onMessageAckEvent(x) {
 
 function updateReceivedMessageAvatar(userId, messageId) {
     const id = `last-received-avatar-${userId}`;
+
+    {
+        const lastAvatarEntry = document.querySelector(`chat-entry #${id}`);
+        const ackEntry = document.querySelector(`chat-entry #${messageId}`);
+
+        if (lastAvatarEntry && ackEntry) {
+            const result = lastAvatarEntry.compareDocumentPosition(ackEntry);
+            if (result & Node.DOCUMENT_POSITION_PRECEDING) {
+                return;
+            }
+        }
+    }
 
     const lastAvatar = document.getElementById(id);
     if (lastAvatar) {
@@ -80,6 +110,7 @@ function showMessage(message) {
 
     if (window.userId !== message.userId) {
         updateSentMessageAvatar(element, message.userId);
+        updateReceivedMessageAvatar(message.userId, message.messageId);
     }
 
     // NOTE(panmar): This is probablly not what we want for all messages
@@ -127,7 +158,6 @@ function createChatEntryFromOtherHtml(message) {
     let userNameHtml = "";
 
     if (message.userId !== getLastDisplayedMessageUserId()) {
-        console.log(`${message.userId} !== ${getLastDisplayedMessageUserId()}`);
         userNameHtml = `<div class="sender-name">User #${message.userId}</div>`;
     }
 
@@ -217,6 +247,17 @@ function hookSendMessageInput(element) {
             console.log(`Message: ${JSON.stringify(message)}`);
         }
     });
+}
+
+function isElemVisible(element) {
+    const rect = element.getBoundingClientRect();
+
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
 }
 
 setup();
