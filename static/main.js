@@ -1,266 +1,290 @@
-class Message {
-    constructor(userId, text, messageSeqNo, socketId) {
-        this.userId = userId;
-        this.text = text;
-        this.messageId = `message-id-${userId}-${messageSeqNo}`;
-        this.socketId = socketId;
-    }
-}
+(function () {
+    class Message {
+        static lastMessageSeqNo = -1;
 
-function setup() {
-    window.userId = Math.floor(Math.random() * 10000);
-    window.lastMessageSeqNo = -1;
-    window.messagesToAck = [];
-
-    if (!window.socket) {
-        window.socket = io.connect("", { query: `userId=${window.userId}` });
-    }
-
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    window.socket.on("connect", onConnectEvent);
-    window.socket.on("disconnect", onDisconnectEvent);
-    window.socket.on("history", onHistoryEvent);
-    window.socket.on("message", onMessageEvent);
-    window.socket.on("message-ack", onMessageAckEvent);
-
-    hookSendMessageInput(document.getElementById("send-message-input"));
-}
-
-function onVisibilityChange() {
-    if (document.hidden) {
-        return;
-    }
-
-    for (const message of window.messagesToAck) {
-        window.socket.emit("message-ack", window.userId, message.messageId);
-    }
-
-    window.messagesToAck = [];
-}
-
-function onConnectEvent() {
-    let input = document.getElementById("send-message-input");
-    input.style.backgroundColor = "darkgrey";
-}
-
-function onDisconnectEvent() {
-    let input = document.getElementById("send-message-input");
-    input.style.backgroundColor = "rgb(172, 83, 83)";
-}
-
-function onHistoryEvent(messages) {
-    console.log(`Received history: ${JSON.stringify(messages)}`);
-    clearChatMessages();
-    messages.forEach((message) => { showMessage(message); });
-}
-
-function onMessageEvent(message) {
-    if (message.userId === window.userId) {
-        return;
-    }
-    showMessage(message);
-
-    if (document.hidden) {
-        window.messagesToAck.push(message);
-    } else {
-        window.socket.emit("message-ack", window.userId, message.messageId);
-    }
-}
-
-function onMessageAckEvent(x) {
-    console.log(`User: ${x.userId} have seen ${x.messageId}`);
-    updateReceivedMessageAvatar(x.userId, x.messageId);
-}
-
-function updateReceivedMessageAvatar(userId, messageId) {
-    const id = `last-received-avatar-${userId}`;
-
-    {
-        const lastAvatarEntry = document.querySelector(`chat-entry #${id}`);
-        const ackEntry = document.querySelector(`chat-entry #${messageId}`);
-
-        if (lastAvatarEntry && ackEntry) {
-            const result = lastAvatarEntry.compareDocumentPosition(ackEntry);
-            if (result & Node.DOCUMENT_POSITION_PRECEDING) {
-                return;
-            }
+        constructor(userId, text) {
+            this.userId = userId;
+            this.text = text;
+            this.messageId = `message-id-${userId}-${++Message.lastMessageSeqNo}`;
         }
     }
 
-    const lastAvatar = document.getElementById(id);
-    if (lastAvatar) {
-        lastAvatar.remove();
-    }
+    class Chat {
+        constructor() {
+            this.userId = Math.floor(Math.random() * 10000);
+            this.layout = new ChatLayout(this.userId);
+            this.messagesToAck = [];
+            this.socket = io.connect("", { query: `userId=${this.userId}` });
 
-    {
-        let messageElement = document.getElementById(messageId);
-        let avatarCellElement = messageElement.getElementsByClassName("message-multiple-receivers-area")[0];
-        const avatarElement = document.createElement("div");
-        const [red, green, blue] = computeUserColor(userId);
-        avatarElement.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
-        avatarElement.classList.add("receiver-avatar");
-        avatarElement.id = id;
-        avatarCellElement.appendChild(avatarElement);
-    }
-}
+            this.socket.on("connect", this.onConnectEvent);
+            this.socket.on("disconnect", this.onDisconnectEvent);
+            this.socket.on("history", this.onHistoryEvent);
+            this.socket.on("message", this.onMessageEvent);
+            this.socket.on("message-ack", this.onMessageAckEvent);
+            document.addEventListener("visibilitychange", this.onVisibilityChange);
+            this.layout.addSendMessageCallback(this.onSendMessage);
+        }
 
-function showMessage(message) {
-    let element = createChatEntryElement(message);
-    document.getElementById("chat").appendChild(element);
+        onConnectEvent = () => {
+            this.layout.onConnect();
+        }
 
-    if (window.userId !== message.userId) {
-        updateSentMessageAvatar(element, message.userId);
-        updateReceivedMessageAvatar(message.userId, message.messageId);
-    }
+        onDisconnectEvent = () => {
+            this.layout.onDisconnect();
+        }
 
-    // NOTE(panmar): This is probablly not what we want for all messages
-    element.scrollIntoView();
-}
+        onHistoryEvent = (messages) => {
+            this.layout.clearChatMessages();
+            this.layout.displayMessages(messages);
+        }
 
+        onMessageEvent = (message) => {
+            if (message.userId === this.userId) {
+                return;
+            }
+            this.layout.displayMessage(message);
 
-function createChatEntryElement(message) {
-    let html = "";
-    if (window.userId === message.userId) {
-        html = createChatEntryFromMeHtml(message);
-    } else {
-        html = createChatEntryFromOtherHtml(message);
-    }
+            if (document.hidden) {
+                this.messagesToAck.push(message);
+            } else {
+                this.socket.emit("message-ack", this.userId, message.messageId);
+            }
+        }
 
-    let element = document.createElement("div");
-    element.classList.add("chat-entry")
-    element.innerHTML = html;
-    element.id = message.messageId;
-    return element;
-}
+        onMessageAckEvent = (x) => {
+            console.log(`User: ${x.userId} have seen ${x.messageId}`);
+            this.layout.updateReceivedMessageAvatar(x.userId, x.messageId);
+        }
 
-function createChatEntryFromMeHtml(message) {
-    const html = `
-        <div class="message-from-me">
-            <div class="sender-avatar-area"></div>
-            <div class="message-main-area">
-                <div class="message-text-area right">
-                    <div class="message-buttons hide">
-                        <div class="message-button"></div>
-                        <div class="message-button"></div>
-                        <div class="message-button"></div>
-                    </div>
-                    <div class="message-text message-text-me">${message.text}</div>
-                </div>
-            </div>
-            <div class="message-single-receiver-area"></div>
-        </div>
-        <div class="message-multiple-receivers-area"></div>`;
-
-    return html;
-}
-
-function createChatEntryFromOtherHtml(message) {
-    let userNameHtml = "";
-
-    if (message.userId !== getLastDisplayedMessageUserId()) {
-        userNameHtml = `<div class="sender-name">User #${message.userId}</div>`;
-    }
-
-    const html = `
-        <div class="message-from-other">
-            <div class="sender-avatar-area"></div>
-            <div class="message-main-area">
-                ${userNameHtml}
-                <div class="message-text-area">
-                    <div class="message-text message-text-other">${message.text}</div>
-                    <div class="message-buttons hide">
-                        <div class="message-button"></div>
-                        <div class="message-button"></div>
-                        <div class="message-button"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="message-single-receiver-area"></div>
-        </div>
-        <div class="message-multiple-receivers-area"></div>`;
-
-    return html;
-}
-
-function updateSentMessageAvatar(chatEntryElement, userId) {
-    const id = `last-sent-avatar-${userId}`;
-    let element = document.getElementById(id);
-    if (element) {
-        element.remove();
-    }
-
-    {
-        const [red, green, blue] = computeUserColor(userId);
-        const color = `rgb(${red}, ${green}, ${blue})`;
-        let avatar = document.createElement("div");
-        avatar.classList.add("sender-avatar");
-        avatar.style.backgroundColor = color;
-        avatar.id = id;
-        chatEntryElement.getElementsByClassName("sender-avatar-area")[0].appendChild(avatar);
-    }
-}
-
-function computeUserColor(userId) {
-    const red = 0;
-    const green = userId % 256;
-    const blue = (userId.toString().split("").reverse().join("")) % 256;
-    return [red, green, blue];
-}
-
-function getLastDisplayedMessageUserId() {
-    let chatUserNameElements = document.getElementById("chat").getElementsByClassName("sender-name");
-    if (chatUserNameElements.length === 0) {
-        return -1;
-    }
-
-    const lastChatUserNameText = chatUserNameElements[chatUserNameElements.length - 1].innerHTML;
-    // NOTE(panmar): Text is of `User #123456`
-    const userIdStartingIndex = lastChatUserNameText.indexOf("#") + 1;
-    const lastChatUserId = lastChatUserNameText.slice(userIdStartingIndex);
-    return parseInt(lastChatUserId);
-}
-
-function clearChatMessages() {
-    let chatElement = document.getElementById("chat");
-    chatElement.replaceChildren();
-}
-
-function hookSendMessageInput(element) {
-    element.addEventListener("keypress", (event) => {
-        if (event.key === "Enter") {
-            event.preventDefault();
-
-            let messageText = element.value;
-            if (!messageText) {
+        onVisibilityChange = () => {
+            if (document.hidden) {
                 return;
             }
 
-            const message = new Message(window.userId, messageText, ++window.lastMessageSeqNo, window.socket.id);
+            for (const message of this.messagesToAck) {
+                this.socket.emit("message-ack", this.userId, message.messageId);
+            }
+
+            this.messagesToAck = [];
+        }
+
+        onSendMessage = (messageText) => {
+            const message = new Message(this.userId, messageText);
+            this.socket.emit("message", message);
+            console.log(`Message: ${JSON.stringify(message)}`);
+            return message;
+        }
+    }
+
+    class ChatLayout {
+        static sendMessageInputId = "send-message-input";
+        static chatId = "chat";
+        static senderNameClass = "sender-name";
+
+        constructor(ownerId) {
+            this.ownerId = ownerId;
+            this.sendMessageCallback = (message) => { };
+            this.createSendMessageHandler();
+        }
+
+        addSendMessageCallback(callback) {
+            this.sendMessageCallback = callback;
+        }
+
+        onConnect() {
+            let input = document.getElementById(ChatLayout.sendMessageInputId);
+            input.style.backgroundColor = "darkgrey";
+        }
+
+        onDisconnect() {
+            let input = document.getElementById(ChatLayout.sendMessageInputId);
+            input.style.backgroundColor = "rgb(172, 83, 83)";
+        }
+
+        createSendMessageHandler() {
+            let element = document.getElementById(ChatLayout.sendMessageInputId);
+            element.addEventListener("keypress", (event) => {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+
+                    let messageText = element.value;
+                    if (!messageText) {
+                        return;
+                    }
+
+                    if (this.sendMessageCallback) {
+                        const message = this.sendMessageCallback(messageText);
+                        this.displayMessage(message);
+                    }
+
+                    element.value = "";
+                }
+            });
+        }
+
+        displayMessages(messages) {
+            for (const message of messages) {
+                this.displayMessage(message);
+            }
+        }
+
+        displayMessage(message) {
+            let element = this.createChatEntryElement(message);
+            document.getElementById(ChatLayout.chatId).appendChild(element);
+
+            if (this.ownerId !== message.userId) {
+                this.updateSentMessageAvatar(element, message.userId);
+                this.updateReceivedMessageAvatar(message.userId, message.messageId);
+            }
+
+            // NOTE(panmar): This is probablly not what we want for all messages
+            element.scrollIntoView();
+        }
+
+        createChatEntryElement(message) {
+            let html = "";
+            if (this.ownerId === message.userId) {
+                html = this.createChatEntryFromMeHtml(message);
+            } else {
+                html = this.createChatEntryFromOtherHtml(message);
+            }
+
+            let element = document.createElement("div");
+            element.classList.add("chat-entry")
+            element.innerHTML = html;
+            element.id = message.messageId;
+            return element;
+        }
+
+        createChatEntryFromMeHtml(message) {
+            const html = `
+            <div class="message-from-me">
+                <div class="sender-avatar-area"></div>
+                <div class="message-main-area">
+                    <div class="message-text-area right">
+                        <div class="message-buttons hide">
+                            <div class="message-button"></div>
+                            <div class="message-button"></div>
+                            <div class="message-button"></div>
+                        </div>
+                        <div class="message-text message-text-me">${message.text}</div>
+                    </div>
+                </div>
+                <div class="message-single-receiver-area"></div>
+            </div>
+            <div class="message-multiple-receivers-area"></div>`;
+
+            return html;
+        }
+
+        createChatEntryFromOtherHtml(message) {
+            let userNameHtml = "";
+
+            if (message.userId !== this.getLastDisplayedMessageUserId()) {
+                userNameHtml = `<div class="sender-name">User #${message.userId}</div>`;
+            }
+
+            const html = `
+            <div class="message-from-other">
+                <div class="sender-avatar-area"></div>
+                <div class="message-main-area">
+                    ${userNameHtml}
+                    <div class="message-text-area">
+                        <div class="message-text message-text-other">${message.text}</div>
+                        <div class="message-buttons hide">
+                            <div class="message-button"></div>
+                            <div class="message-button"></div>
+                            <div class="message-button"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="message-single-receiver-area"></div>
+            </div>
+            <div class="message-multiple-receivers-area"></div>`;
+
+            return html;
+        }
+
+        updateSentMessageAvatar(chatEntryElement, userId) {
+            const id = `last-sent-avatar-${userId}`;
+            let element = document.getElementById(id);
+            if (element) {
+                element.remove();
+            }
 
             {
-                showMessage(message);
-                window.socket.emit("message", message);
+                const [red, green, blue] = this.computeUserColor(userId);
+                const color = `rgb(${red}, ${green}, ${blue})`;
+                let avatar = document.createElement("div");
+                avatar.classList.add("sender-avatar");
+                avatar.style.backgroundColor = color;
+                avatar.id = id;
+                chatEntryElement.getElementsByClassName("sender-avatar-area")[0].appendChild(avatar);
+            }
+        }
+
+        updateReceivedMessageAvatar(userId, messageId) {
+            const id = `last-received-avatar-${userId}`;
+
+            {
+                const lastAvatarEntry = document.querySelector(`chat-entry #${id}`);
+                const ackEntry = document.querySelector(`chat-entry #${messageId}`);
+
+                if (lastAvatarEntry && ackEntry) {
+                    const result = lastAvatarEntry.compareDocumentPosition(ackEntry);
+                    if (result & Node.DOCUMENT_POSITION_PRECEDING) {
+                        return;
+                    }
+                }
             }
 
-            element.value = "";
+            const lastAvatar = document.getElementById(id);
+            if (lastAvatar) {
+                lastAvatar.remove();
+            }
 
-            console.log(`Message: ${JSON.stringify(message)}`);
+            {
+                let messageElement = document.getElementById(messageId);
+                let avatarCellElement = messageElement.getElementsByClassName("message-multiple-receivers-area")[0];
+                const avatarElement = document.createElement("div");
+                const [red, green, blue] = this.computeUserColor(userId);
+                avatarElement.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
+                avatarElement.classList.add("receiver-avatar");
+                avatarElement.id = id;
+                avatarCellElement.appendChild(avatarElement);
+            }
         }
-    });
-}
 
-function isElemVisible(element) {
-    const rect = element.getBoundingClientRect();
+        computeUserColor(userId) {
+            const red = 0;
+            const green = userId % 256;
+            const blue = (userId.toString().split("").reverse().join("")) % 256;
+            return [red, green, blue];
+        }
 
-    return (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-    );
-}
+        clearChatMessages() {
+            let chatElement = document.getElementById(ChatLayout.chatId);
+            chatElement.replaceChildren();
+        }
 
-setup();
+        getLastDisplayedMessageUserId() {
+            let chatUserNameElements = document.getElementById(ChatLayout.chatId)
+                .getElementsByClassName(ChatLayout.senderNameClass);
+            if (chatUserNameElements.length === 0) {
+                return -1;
+            }
 
-// NOTE(panmar): This would prevent losing input focus, but would prevent copy chat text
-// document.onmousedown = (e) => { e.preventDefault(); };
+            const lastChatUserNameText = chatUserNameElements[chatUserNameElements.length - 1].innerHTML;
+            // NOTE(panmar): Text is of `User #123456`
+            const userIdStartingIndex = lastChatUserNameText.indexOf("#") + 1;
+            const lastChatUserId = lastChatUserNameText.slice(userIdStartingIndex);
+            return parseInt(lastChatUserId);
+        }
+    }
+
+    let chat = new Chat();
+
+    // NOTE(panmar): This would prevent losing input focus, but would prevent copy chat text
+    // document.onmousedown = (e) => { e.preventDefault(); };
+
+}());
