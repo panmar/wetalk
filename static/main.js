@@ -9,6 +9,18 @@
         }
     }
 
+    function isMessageValid(message) {
+        if (!message.userId.toString().match(/^[0-9a-zA-Z]+$/)) {
+            return false;
+        }
+
+        if (!message.messageId.match(/^[0-9a-zA-Z-]+$/)) {
+            return false;
+        }
+
+        return true;
+    }
+
     class Chat {
         constructor() {
             this.userId = Math.floor(Math.random() * 10000);
@@ -34,14 +46,21 @@
         }
 
         onHistoryEvent = (messages) => {
+            for (const message of messages) {
+                if (!isMessageValid(message)) {
+                    return;
+                }
+            }
             this.layout.clearChatMessages();
             this.layout.displayMessages(messages);
         }
 
         onMessageEvent = (message) => {
-            if (message.userId === this.userId) {
+            console.log(JSON.stringify(message, null, 4));
+            if (!isMessageValid(message) || (message.userId === this.userId)) {
                 return;
             }
+
             this.layout.displayMessage(message);
 
             if (document.hidden) {
@@ -144,19 +163,33 @@
         createChatEntryElement(message) {
             let html = "";
             if (this.ownerId === message.userId) {
-                html = this.createChatEntryFromMeHtml(message);
+                html = this.createChatEntryFromMeHtml();
             } else {
-                html = this.createChatEntryFromOtherHtml(message);
+                html = this.createChatEntryFromOtherHtml();
             }
 
             let element = document.createElement("div");
             element.classList.add("chat-entry")
             element.innerHTML = html;
             element.id = message.messageId;
+
+            if (this.ownerId !== message.userId) {
+                let senderNameElement = element.getElementsByClassName("sender-name")[0];
+                if (message.userId !== this.getLastDisplayedMessageUserId()) {
+                    const senderName = `User #${message.userId}`;
+                    senderNameElement.textContent = senderName;
+                } else {
+                    senderNameElement.remove();
+                }
+            }
+
+            let messageElement = element.getElementsByClassName("message-text")[0];
+            messageElement.textContent = message.text;
+
             return element;
         }
 
-        createChatEntryFromMeHtml(message) {
+        createChatEntryFromMeHtml() {
             const html = `
             <div class="message-from-me">
                 <div class="sender-avatar-area"></div>
@@ -167,7 +200,7 @@
                             <div class="message-button"></div>
                             <div class="message-button"></div>
                         </div>
-                        <div class="message-text message-text-me">${message.text}</div>
+                        <div class="message-text message-text-me"></div>
                     </div>
                 </div>
                 <div class="message-single-receiver-area"></div>
@@ -177,20 +210,14 @@
             return html;
         }
 
-        createChatEntryFromOtherHtml(message) {
-            let userNameHtml = "";
-
-            if (message.userId !== this.getLastDisplayedMessageUserId()) {
-                userNameHtml = `<div class="sender-name">User #${message.userId}</div>`;
-            }
-
+        createChatEntryFromOtherHtml() {
             const html = `
             <div class="message-from-other">
                 <div class="sender-avatar-area"></div>
                 <div class="message-main-area">
-                    ${userNameHtml}
+                    <div class="sender-name"></div>
                     <div class="message-text-area">
-                        <div class="message-text message-text-other">${message.text}</div>
+                        <div class="message-text message-text-other"></div>
                         <div class="message-buttons hide">
                             <div class="message-button"></div>
                             <div class="message-button"></div>
