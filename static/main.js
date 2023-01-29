@@ -127,7 +127,8 @@
                 if (event.key === "Enter") {
                     event.preventDefault();
 
-                    let messageText = element.value;
+                    let messageText = element.value.trim();
+                    element.value = "";
                     if (!messageText) {
                         return;
                     }
@@ -136,8 +137,6 @@
                         const message = this.sendMessageCallback(messageText);
                         this.displayMessage(message);
                     }
-
-                    element.value = "";
                 }
             });
         }
