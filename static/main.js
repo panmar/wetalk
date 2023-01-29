@@ -103,7 +103,7 @@
 
         constructor(ownerId) {
             this.ownerId = ownerId;
-            this.sendMessageCallback = (message) => { };
+            this.sendMessageCallback = (_message) => { };
             this.createSendMessageHandler();
         }
 
