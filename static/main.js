@@ -1,3 +1,4 @@
+"use strict";
 (function () {
     class Message {
         static lastMessageSeqNo = -1;
