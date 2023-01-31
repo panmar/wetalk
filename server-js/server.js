@@ -5,15 +5,20 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const app = express();
-app.use(express.static("../static"));
+app.use(express.static("../static", { index: false }));
 const httpServer = createServer(app);
 const io = new Server(httpServer, { /* options */ });
 let roomMessages = new Map();
 
-app.get("/:roomId", (req, res) => {
+app.get("/:roomId", (_req, res) => {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     res.sendFile(path.join(__dirname, "/../static/index.html"));
+});
+
+app.get("*", (_req, res) => {
+    const roomId = crypto.randomUUID();
+    res.redirect(`/${roomId}`);
 });
 
 io.on("connection", (socket) => {
