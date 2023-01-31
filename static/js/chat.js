@@ -1,12 +1,13 @@
 import Message, { isMessageValid } from "./message.js";
 import ChatLayout from "./chatLayout.js";
 
-export default class Chat {
-    constructor() {
+export default class ChatRoom {
+    constructor(roomId) {
+        this.roomId = roomId;
         this.userId = Math.floor(Math.random() * 10000);
         this.layout = new ChatLayout(this.userId);
         this.messagesToAck = [];
-        this.socket = io.connect("", { query: `userId=${this.userId}` });
+        this.socket = io.connect("", { query: { userId: this.userId, roomId: roomId } });
 
         this.socket.on("connect", this.onConnectEvent);
         this.socket.on("disconnect", this.onDisconnectEvent);
@@ -46,7 +47,7 @@ export default class Chat {
         if (document.hidden) {
             this.messagesToAck.push(message);
         } else {
-            this.socket.emit("message-ack", this.userId, message.messageId);
+            this.socket.emit("message-ack", this.userId, this.roomId, message.messageId);
         }
     }
 
@@ -61,14 +62,14 @@ export default class Chat {
         }
 
         for (const message of this.messagesToAck) {
-            this.socket.emit("message-ack", this.userId, message.messageId);
+            this.socket.emit("message-ack", this.userId, this.roomId, message.messageId);
         }
 
         this.messagesToAck = [];
     }
 
     onSendMessage = (messageText) => {
-        const message = new Message(this.userId, messageText);
+        const message = new Message(this.userId, this.roomId, messageText);
         this.socket.emit("message", message);
         console.log(`Message: ${JSON.stringify(message)}`);
         return message;
