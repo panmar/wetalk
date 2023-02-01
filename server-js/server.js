@@ -36,12 +36,12 @@ io.on("connection", (socket) => {
     socket.on("message", (message) => {
         console.log(`Message received: ${JSON.stringify(message)}`);
         roomMessages.get(message.roomId).push(message);
-        io.to(message.roomId).emit("message", message);
+        socket.to(message.roomId).emit("message", message);
     });
 
     socket.on("message-ack", (userId, roomId, messageId) => {
         console.log(`Message ack: ${userId} ${messageId}`);
-        io.to(roomId).emit("message-ack", { userId, messageId });
+        socket.to(roomId).emit("message-ack", { userId, messageId });
     });
 
     socket.on("disconnect", (reason) => {
