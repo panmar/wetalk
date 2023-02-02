@@ -3,13 +3,48 @@ export default class ChatLayout {
     static chatId = "chat";
     static senderNameClass = "sender-name";
 
-    constructor(ownerId) {
-        this.ownerId = ownerId;
+    constructor(user) {
+        this.user = user;
+        this.registerSettingsWindow();
         this.sendMessageCallback = (_message) => { };
         this.createSendMessageHandler();
+        this.lastMessageUserId = "";
     }
 
-    addSendMessageCallback(callback) {
+    isSelfMessage(message) {
+        return message.userId === this.user.getId();
+    }
+
+    registerSettingsWindow() {
+        let settingsWindow = document.getElementById("settings-window");
+        let usernameInput = document.getElementById("change-username-input");
+        let publicKeyInput = document.getElementById("public-key-input");
+        let settingsSaveBtn = document.getElementById("settings-save-btn");
+        let settingsCancelBtn = document.getElementById("settings-cancel-btn");
+
+        settingsSaveBtn.onclick = () => {
+            let username = usernameInput.value.trim();
+            usernameInput.value = "";
+            if (!username) {
+                return;
+            }
+            this.user.setName(username);
+            settingsWindow.style.display = "none";
+        };
+
+        settingsCancelBtn.onclick = () => {
+            settingsWindow.style.display = "none";
+        };
+
+        let settings = document.getElementById("settings");
+        settings.onclick = () => {
+            settingsWindow.style.display = "block";
+            usernameInput.value = this.user.getName();
+            publicKeyInput.value = nacl.util.encodeBase64(this.user.getPublicKey());
+        };
+    }
+
+    setSendMessageCallback(callback) {
         this.sendMessageCallback = callback;
     }
 
@@ -53,18 +88,19 @@ export default class ChatLayout {
         let element = this.createChatEntryElement(message);
         document.getElementById(ChatLayout.chatId).appendChild(element);
 
-        if (this.ownerId !== message.userId) {
+        if (!(this.isSelfMessage(message))) {
             this.updateSentMessageAvatar(element, message.userId);
             this.updateReceivedMessageAvatar(message.userId, message.messageId);
         }
 
         // NOTE(panmar): This is probablly not what we want for all messages
         element.scrollIntoView();
+        this.lastMessageUserId = message.userId;
     }
 
     createChatEntryElement(message) {
         let html = "";
-        if (this.ownerId === message.userId) {
+        if (this.isSelfMessage(message)) {
             html = this.createChatEntryFromMeHtml();
         } else {
             html = this.createChatEntryFromOtherHtml();
@@ -75,10 +111,10 @@ export default class ChatLayout {
         element.innerHTML = html;
         element.id = message.messageId;
 
-        if (this.ownerId !== message.userId) {
+        if (!(this.isSelfMessage(message))) {
             let senderNameElement = element.getElementsByClassName("sender-name")[0];
-            if (message.userId !== this.getLastDisplayedMessageUserId()) {
-                const senderName = `User #${message.userId}`;
+            if (message.userId !== this.lastMessageUserId) {
+                const senderName = `${message.userName}`;
                 senderNameElement.textContent = senderName;
             } else {
                 senderNameElement.remove();
@@ -138,7 +174,12 @@ export default class ChatLayout {
         const id = `last-sent-avatar-${userId}`;
         let element = document.getElementById(id);
         if (element) {
-            element.remove();
+            if (this.lastMessageUserId === userId) {
+                console.log(`lastMessageId = ${this.lastMessageUserId} the same as ${userId}`);
+                element.remove();
+            } else {
+                element.removeAttribute("id");
+            }
         }
 
         {
@@ -185,28 +226,16 @@ export default class ChatLayout {
     }
 
     computeUserColor(userId) {
+        const id = parseInt(nacl.util.decodeBase64(userId));
+        console.log(`Id for color = ${id}`);
         const red = 0;
-        const green = userId % 256;
-        const blue = (userId.toString().split("").reverse().join("")) % 256;
+        const green = id % 256;
+        const blue = (id.toString().split("").reverse().join("")) % 256;
         return [red, green, blue];
     }
 
     clearChatMessages() {
         let chatElement = document.getElementById(ChatLayout.chatId);
         chatElement.replaceChildren();
-    }
-
-    getLastDisplayedMessageUserId() {
-        let chatUserNameElements = document.getElementById(ChatLayout.chatId)
-            .getElementsByClassName(ChatLayout.senderNameClass);
-        if (chatUserNameElements.length === 0) {
-            return -1;
-        }
-
-        const lastChatUserNameText = chatUserNameElements[chatUserNameElements.length - 1].innerHTML;
-        // NOTE(panmar): Text is of `User #123456`
-        const userIdStartingIndex = lastChatUserNameText.indexOf("#") + 1;
-        const lastChatUserId = lastChatUserNameText.slice(userIdStartingIndex);
-        return parseInt(lastChatUserId);
     }
 }

@@ -1,8 +1,9 @@
 export default class Message {
     static lastMessageSeqNo = -1;
 
-    constructor(userId, roomId, text) {
+    constructor(userId, userName, roomId, text) {
         this.userId = userId;
+        this.userName = userName;
         this.roomId = roomId;
         this.text = text;
         this.messageId = `message-id-${userId}-${++Message.lastMessageSeqNo}`;

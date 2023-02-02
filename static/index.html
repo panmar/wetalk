@@ -14,19 +14,44 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"
         integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA=="
         crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tweetnacl-util@0.15.0/nacl-util.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.1/nacl.min.js"></script>
     <script type="module" src="js/index.js"></script>
 
 </head>
 
 <body>
-    <div id="logo">
-        <a href="/">WeTalk</a>
+    <div id="logo" class="prevent-select">
+        <span>WeTalk</span>
     </div>
     <nav>
-        <a class="active" href="/">Chat</a> | <a href="/settings.html">Settings</a>
+        <a>New</a> | <a id="settings">Settings</a>
     </nav>
+
+    <div id="settings-window" class="window">
+        <div class="window-content">
+            <h1>Settings</h1>
+            <div class="setting">
+                <label>Username</label>
+                <input type="text" id="change-username-input" autocomplete="off">
+            </div>
+
+            <div class="setting">
+                <label>Public key</label>
+                <textarea id="public-key-input" rows="2" cols="32" autocomplete="off" readonly></textarea>
+                <!-- <input type="text" id="public-key-input" autocomplete="off" readonly> -->
+            </div>
+
+            <div class="settings-buttons">
+                <button type="button" id="settings-save-btn">Save</button>
+                <button type="button" id="settings-cancel-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <div id="content">
         <div id="innercontent">
+
             <hr id="topbar">
             <div id="chat-area">
                 <div id="chat"></div>
