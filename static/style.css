@@ -266,6 +266,8 @@ pre {
 }
 
 .message-buttons {
+    margin-left: 3pt;
+    margin-right: 3pt;
     align-items: center;
     display: flex;
     flex-direction: row;
@@ -277,6 +279,8 @@ pre {
     width: 15pt;
     background-color: #bbb;
     border-radius: 50%;
+    margin-left: 1pt;
+    margin-right: 1pt;
 }
 
 .hide {
@@ -308,8 +312,9 @@ pre {
 }
 
 .sender-avatar {
-    height: 30pt;
-    width: 30pt;
+    margin-right: 2pt;
+    height: 28pt;
+    width: 28pt;
     background-color: #bbb;
     border-radius: 50%;
 }
