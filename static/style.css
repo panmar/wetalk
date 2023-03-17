@@ -195,6 +195,7 @@ pre {
     display: flex;
     flex-direction: column;
     justify-content: end;
+    height: 100%;
 }
 
 .chat-entry {
