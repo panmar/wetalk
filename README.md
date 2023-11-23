@@ -1,5 +1,5 @@
 # wetalk
-A simple prototype for chat web application implemented using native javascript, socketio and nodejs express server.
+A simple prototype for chat web application implemented using javascript, socketio and nodejs express server.
 
 <p align="center"><img src="doc/screenshot.jpg" alt="example" width="400"/></p>
 
